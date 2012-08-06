@@ -42,7 +42,10 @@ public class Bluetooth implements DiscoveryListener, Runnable {
     Thread screenUpdater;
     long screenTimeout = 2000;
     long keepAliveTimeout = 7000;
-    public boolean isAlive = true;
+    public static final int CONNECTION_NORMAL = 1;
+    public static final int CONNECTION_WARNING = 2;
+    public static final int CONNECTION_TIMEOUT = -1;
+    public int connectionStatus = 1; //1: Normal; 2: Missed 1 beacon; -1: Timeout
     /**
      * It creates a new instance of the Bluetooth class.
      * @param remote  The core Remote class
@@ -84,7 +87,6 @@ public class Bluetooth implements DiscoveryListener, Runnable {
                     remote.commandsTable.commandReceived(cmd);
                 }else if (cmd.startsWith("NOOP")){
                 	beacon = System.currentTimeMillis();
-                	isAlive = true;
                 }else if (cmd.startsWith("SCRC")) {
                 	//remote.bluetooth.SendData("ACK");
                 	long start = System.currentTimeMillis();
@@ -104,14 +106,21 @@ public class Bluetooth implements DiscoveryListener, Runnable {
                 }else{
                 	//remote.doAlert(cmd, -1, remote.mainCanvas);
                 	remote.bluetooth.resetInput();
-                	if (System.currentTimeMillis()-beacon>keepAliveTimeout){ //10 seconds
-                		isAlive=false;
-                		remote.bluetooth.SendData("ACK");
-                	}
                 }
+                //Track connection status
+                int interval = (int) (System.currentTimeMillis()-beacon);
+                if (interval<1500){
+                	connectionStatus = CONNECTION_NORMAL;
+                }else if (interval <3000){
+                	connectionStatus = CONNECTION_WARNING;
+                }else if (interval>keepAliveTimeout){ //10 seconds
+            		connectionStatus=CONNECTION_TIMEOUT;
+            		remote.bluetooth.SendData("ACK");
+            	}
             	
 
             } catch (Exception e) {
+            	//Restart the thread (thread seem to stop accepting connections after exception)
             	//remote.doAlert(e.toString(), -1, remote.mainCanvas);
             	remote.bluetooth.resetInput();
             	isrunning = false;

@@ -20,6 +20,8 @@ import remoteclient.Remote;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Displayable;
 
+import device.Bluetooth;
+
 /**
  * This is the canvas that handles the mouse and keyboard mode.
  * It has a keylistener and whenever a key is pressed or released
@@ -350,11 +352,17 @@ public class MainCanvas extends Canvas implements CommandListener, Runnable {
         if (screen.length > 0) {
            g.drawImage(Image.createImage(screen, 0, screen.length), 0, tHeight, Graphics.TOP | Graphics.LEFT);
         }
-        if (!remote.bluetooth.isAlive){
+        switch (remote.bluetooth.connectionStatus){
+        case Bluetooth.CONNECTION_NORMAL:
+        	g.setColor(0, 0, 0);
+        	g.drawString("Normal", width/2, height , Graphics.BOTTOM|Graphics.HCENTER); break;
+        case Bluetooth.CONNECTION_WARNING:
+        	g.setColor(155, 155, 0);
+    		g.drawString("Signal Low", width/2, height , Graphics.BOTTOM|Graphics.HCENTER);break;
+        case Bluetooth.CONNECTION_TIMEOUT: 
         	g.setColor(255, 0, 0);
-        	g.drawString("!", width/2, height , Graphics.BOTTOM|Graphics.HCENTER);
+    		g.drawString("Reconnecting", width/2, height , Graphics.BOTTOM|Graphics.HCENTER);break;
         }
-
     }
     
     /**
