@@ -39,12 +39,13 @@ public class Bluetooth implements DiscoveryListener, Runnable {
     java.util.Vector services;
     java.util.Vector servers;
     private boolean cancel = false; //Used when users cancels query
-    Thread screenUpdater;
+    long beacon = System.currentTimeMillis();
     long screenTimeout = 2000;
     long keepAliveTimeout = 7000;
     public static final int CONNECTION_NORMAL = 1;
     public static final int CONNECTION_WARNING = 2;
-    public static final int CONNECTION_TIMEOUT = -1;
+    public static final int CONNECTION_TIMEOUT = 0;
+    public static final int CONNECTION_LOST = -1;
     public int connectionStatus = 1; //1: Normal; 2: Missed 1 beacon; -1: Timeout
     /**
      * It creates a new instance of the Bluetooth class.
@@ -54,7 +55,7 @@ public class Bluetooth implements DiscoveryListener, Runnable {
         this.remote = remote;
         currentDevice = 0;
     }
-
+    
     /**
      * It sends data through the Bluetooth connection.
      * @param data The data to be sent
@@ -69,7 +70,7 @@ public class Bluetooth implements DiscoveryListener, Runnable {
      */
     public void run() {
         boolean isrunning = true;
-        long beacon = System.currentTimeMillis();
+        boolean restart = false;
         while (isrunning) {
             try {
                 String cmd = din.readUTF();
@@ -87,6 +88,7 @@ public class Bluetooth implements DiscoveryListener, Runnable {
                     remote.commandsTable.commandReceived(cmd);
                 }else if (cmd.startsWith("NOOP")){
                 	beacon = System.currentTimeMillis();
+                	//SendData("HTB");
                 }else if (cmd.startsWith("SCRC")) {
                 	//remote.bluetooth.SendData("ACK");
                 	long start = System.currentTimeMillis();
@@ -107,32 +109,55 @@ public class Bluetooth implements DiscoveryListener, Runnable {
                 	//remote.doAlert(cmd, -1, remote.mainCanvas);
                 	remote.bluetooth.resetInput();
                 }
-                //Track connection status
-                int interval = (int) (System.currentTimeMillis()-beacon);
-                if (interval<1500){
-                	connectionStatus = CONNECTION_NORMAL;
-                }else if (interval <3000){
-                	connectionStatus = CONNECTION_WARNING;
-                }else if (interval>keepAliveTimeout){ //10 seconds
-            		connectionStatus=CONNECTION_TIMEOUT;
-            		remote.bluetooth.SendData("ACK");
-            	}
-            	
 
             } catch (Exception e) {
-            	//Restart the thread (thread seem to stop accepting connections after exception)
             	//remote.doAlert(e.toString(), -1, remote.mainCanvas);
-            	remote.bluetooth.resetInput();
-            	isrunning = false;
-            	Thread t = new Thread(this);
-            	t.start();
+            	resetInput();
+            	//isrunning = false;
+            	restart = true;
             	//Automatic failure detection and reconnection obsolete this
                 /*if (remote.mode != Remote.MOUSE_MODE) {
                     isrunning = false;
                 }*/
             }
-            
         }
+      //Restart the thread (thread seem to stop accepting connections after exception)
+        if (restart){
+	        Thread t = new Thread(this);
+	    	t.start();
+        }
+    }
+    
+    /**
+     * Tracks connection status
+     */
+    public void connectionCheck(){
+        int interval = (int) (System.currentTimeMillis()-beacon);
+        int original = connectionStatus;
+        if (interval<1500){
+        	connectionStatus = CONNECTION_NORMAL;
+        }else if (interval <3000){
+        	connectionStatus = CONNECTION_WARNING;
+        }else if (interval>keepAliveTimeout){
+    		connectionStatus=CONNECTION_TIMEOUT;
+    		try {
+    			//remote.doAlert("Reconnecting, please wait", 500, remote.mainCanvas);
+    			resetInput();
+				remote.bluetooth.SendData("ACK");
+				resetInput();
+			} catch (IOException e) { //No connection
+				remote.doAlert("Connection lost, please restart", -1, remote.mainCanvas);
+				connectionStatus=CONNECTION_LOST;
+			}
+    	}
+        if (original != connectionStatus)
+        	remote.mainCanvas.repaint();
+    	/*try {
+			SendData("HTB");
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}*/
     }
 
     /**
@@ -202,6 +227,7 @@ public class Bluetooth implements DiscoveryListener, Runnable {
      */
     private void disconnect() {
         try {
+        	//connectionMonitor.cancel();
             if (dout != null) {
                 dout.writeUTF("CLOSE");
             }

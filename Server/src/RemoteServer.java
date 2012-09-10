@@ -36,6 +36,7 @@ public class RemoteServer {
     public int sx = -1;//the server screen width
     public int sy = -1;//the server screen height
 	public double multiplier = 1.5;
+	public int refreshRate = 1000;
     MouseControl mouse;
     KeyboardControl keyboard;
     RemoteServerGUI gui;
@@ -90,119 +91,103 @@ public class RemoteServer {
      */
     public void cmdReceived(final String cmd){
         /*------ Parse the command -------*/
-        
-    	if (cmd.startsWith("MTELE")){								//Touchscreen mouse movement
-			mouse.teleportMouse(Integer.parseInt(cmd.substring(5, cmd.indexOf(';'))), Integer.parseInt(cmd.substring(cmd.indexOf(';')+1)), multiplier);
-    	}
-    	if (cmd.startsWith("AUPDATE")){
-    		autoupdate = !autoupdate;
-    		System.out.println("Autoupdate: "+autoupdate);
-    		if (autoupdate){
-    			screenRefresher = new TimerTask(){
+    	try {
+			if (cmd.startsWith("HTB")){
+				//System.out.println("HTB");
+			}else if (cmd.startsWith("MTELE")){								//Touchscreen mouse movement
+				mouse.teleportMouse(Integer.parseInt(cmd.substring(5, cmd.indexOf(';'))), Integer.parseInt(cmd.substring(cmd.indexOf(';')+1)), multiplier);
+			}else if (cmd.startsWith("AUPDATE")){
+				autoupdate = !autoupdate;
+				System.out.println("Autoupdate: "+autoupdate);
+				if (autoupdate){
+					screenRefresher = new TimerTask(){
 
-    				@Override
-    				public void run() {
-    					if (autoupdate)
-    						mouse.sendScreen(lastSize);
-    				}
-                	
-                };
-                timer.scheduleAtFixedRate(screenRefresher, 1000, 1000);
-    		}else{
-    			try {
-					screenRefresher.cancel();
-				} catch (Exception e) {} //screenRefresher might not have been initialized
-    		}
-    	}
-    	if (cmd.startsWith("SUPDATE")){								//Update screenshot
-    		lastSize = Double.parseDouble(cmd.substring(7));
-    		mouse.sendScreen(lastSize);
-    	}
-        if (cmd.startsWith("MUP")) {
-            String scode = cmd.substring(3);
-            mouse.moveMouse(0, -1,Integer.parseInt(scode));          //Move mouse up
-        }
-        if (cmd.startsWith("MDOWN")) {
-            String scode = cmd.substring(5);
-            mouse.moveMouse(0, 1,Integer.parseInt(scode));		     //Move mouse down
-        }
-        if (cmd.startsWith("MLEFT")) {
-            String scode = cmd.substring(5);
-            mouse.moveMouse(-1, 0,Integer.parseInt(scode));		     //Move mouse left
-        }
-        if (cmd.startsWith("MRIGHT")) {
-            String scode = cmd.substring(6);
-            mouse.moveMouse(1, 0,Integer.parseInt(scode));			 //Move mouse right
-        }
-        
-        if (cmd.equalsIgnoreCase("MLCLICK")) {
-            mouse.mClick(MouseControl.LCLICK);  //Mouse left click pressed
-        }
-        if (cmd.equalsIgnoreCase("SMLCLICK")) {
-            mouse.mRelease(MouseControl.LCLICK); //Mouse left click released		
-        }
-        if (cmd.equalsIgnoreCase("MRCLICK")) {
-            mouse.mClick(MouseControl.RCLICK);	 //Mouse right click pressed
-        }
-        if (cmd.equalsIgnoreCase("SMRCLICK")) {
-            mouse.mRelease(MouseControl.RCLICK); //Mouse right click released
-        }
-        if (cmd.equalsIgnoreCase("MWPRESS")) {
-            mouse.mClick(MouseControl.WCLICK);	 //Mouse wheel pressed
-        }
-        if (cmd.equalsIgnoreCase("SMWPRESS")) {
-            mouse.mRelease(MouseControl.WCLICK); //Mouse wheel released
-        }
-        if (cmd.equalsIgnoreCase("MWUP")) {
-            mouse.mWheel(-1);					 //Move wheel up
-        }
-        if (cmd.equalsIgnoreCase("MWDOWN")) {
-            mouse.mWheel(1);					 //Move wheel down
-        }
-        if(cmd.startsWith("TYPE")){
-        	keyboard.typeString(cmd.substring(4));
-        }
-        if (cmd.startsWith("K")) {				 //Key pressed
-            String scode = cmd.substring(1);
-            keyboard.keyPress(Integer.parseInt(scode));
-        }
-        if (cmd.startsWith("SK")) {				 //Key released
-            String scode = cmd.substring(2);
-            keyboard.keyRelease(Integer.parseInt(scode));
-        }
-        if (cmd.startsWith("run")) {			//Invoke a run command
-            String command = cmd.substring(4);
-            try {
-                String sysName = System.getProperty("os.name");
-                if (sysName.indexOf("windows") != -1) {
-                    Runtime.getRuntime().exec(new String[]{"cmd.exe", "/c", "start", command});
-                }else{//Linux
-                    Runtime.getRuntime().exec(command); 
-                }                
-            } catch (Exception e) {
-            }
-        }
-        if (cmd.startsWith("msg")) {			//Send message has been send
-            String message = cmd.substring(4);
-            gui.showMsgbox(message);
-        }
-        if (cmd.startsWith("DIM")) {			//The screen simensions
-            int ypos = cmd.indexOf("Y");
-            screenx = Integer.parseInt(cmd.substring(3, ypos));
-            screeny = Integer.parseInt(cmd.substring(ypos+1));
-        }
-        if (cmd.equalsIgnoreCase("applist")) {	      //Send the application list
-           try{
-                SendAppList.startSending(this);
-           }catch(Exception e){
-               gui.InfoLabel.setText("Exception Occured " + e.toString());
-           }
-        }
-        if (cmd.equalsIgnoreCase("CLOSE")) {
-        	screenRefresher.cancel();
-        	timer.cancel();
-           bluetooth.close();                           //close connection
-        }
+						@Override
+						public void run() {
+							if (autoupdate)
+								mouse.sendScreen(lastSize);
+						}
+			        	
+			        };
+			        timer.scheduleAtFixedRate(screenRefresher, 1000, refreshRate);
+				}else{
+					try {
+						screenRefresher.cancel();
+					} catch (Exception e) {} //screenRefresher might not have been initialized
+				}
+			}else if (cmd.startsWith("SUPDATE")){								//Update screenshot
+				lastSize = Double.parseDouble(cmd.substring(7));
+				mouse.sendScreen(lastSize);
+			}else if (cmd.startsWith("MUP")) {
+			    String scode = cmd.substring(3);
+			    mouse.moveMouse(0, -1,Integer.parseInt(scode));          //Move mouse up
+			}else if (cmd.startsWith("MDOWN")) {
+			    String scode = cmd.substring(5);
+			    mouse.moveMouse(0, 1,Integer.parseInt(scode));		     //Move mouse down
+			}else if (cmd.startsWith("MLEFT")) {
+			    String scode = cmd.substring(5);
+			    mouse.moveMouse(-1, 0,Integer.parseInt(scode));		     //Move mouse left
+			}else if (cmd.startsWith("MRIGHT")) {
+			    String scode = cmd.substring(6);
+			    mouse.moveMouse(1, 0,Integer.parseInt(scode));			 //Move mouse right
+			}else if (cmd.equalsIgnoreCase("MLCLICK")) {
+			    mouse.mClick(MouseControl.LCLICK);  //Mouse left click pressed
+			}else if (cmd.equalsIgnoreCase("SMLCLICK")) {
+			    mouse.mRelease(MouseControl.LCLICK); //Mouse left click released		
+			}else if (cmd.equalsIgnoreCase("MRCLICK")) {
+			    mouse.mClick(MouseControl.RCLICK);	 //Mouse right click pressed
+			}else if (cmd.equalsIgnoreCase("SMRCLICK")) {
+			    mouse.mRelease(MouseControl.RCLICK); //Mouse right click released
+			}else if (cmd.equalsIgnoreCase("MWPRESS")) {
+			    mouse.mClick(MouseControl.WCLICK);	 //Mouse wheel pressed
+			}else if (cmd.equalsIgnoreCase("SMWPRESS")) {
+			    mouse.mRelease(MouseControl.WCLICK); //Mouse wheel released
+			}else if (cmd.equalsIgnoreCase("MWUP")) {
+			    mouse.mWheel(-1);					 //Move wheel up
+			}else if (cmd.equalsIgnoreCase("MWDOWN")) {
+			    mouse.mWheel(1);					 //Move wheel down
+			}else if(cmd.startsWith("TYPE")){
+				keyboard.typeString(cmd.substring(4));
+			}else if (cmd.startsWith("K")) {				 //Key pressed
+			    String scode = cmd.substring(1);
+			    keyboard.keyPress(Integer.parseInt(scode));
+			}else if (cmd.startsWith("SK")) {				 //Key released
+			    String scode = cmd.substring(2);
+			    keyboard.keyRelease(Integer.parseInt(scode));
+			}else if (cmd.startsWith("run")) {			//Invoke a run command
+			    String command = cmd.substring(4);
+			    try {
+			        String sysName = System.getProperty("os.name");
+			        if (sysName.indexOf("windows") != -1) {
+			            Runtime.getRuntime().exec(new String[]{"cmd.exe", "/c", "start", command});
+			        }else{//Linux
+			            Runtime.getRuntime().exec(command); 
+			        }                
+			    } catch (Exception e) {
+			    }
+			}else if (cmd.startsWith("msg")) {			//Send message has been send
+			    String message = cmd.substring(4);
+			    gui.showMsgbox(message);
+			}else if (cmd.startsWith("DIM")) {			//The screen dimensions
+			    int ypos = cmd.indexOf("Y");
+			    screenx = Integer.parseInt(cmd.substring(3, ypos));
+			    screeny = Integer.parseInt(cmd.substring(ypos+1));
+			}else if (cmd.equalsIgnoreCase("applist")) {	      //Send the application list
+			   try{
+			        SendAppList.startSending(this);
+			   }catch(Exception e){
+			       gui.InfoLabel.setText("Exception Occured " + e.toString());
+			   }
+			}else if (cmd.equalsIgnoreCase("CLOSE")) {
+				screenRefresher.cancel();
+				timer.cancel();
+			   bluetooth.close();                           //close connection
+			}else{
+				System.out.println("Invalid command: "+cmd);
+			}
+		} catch (NumberFormatException e) {
+			System.out.println("Command corrupt:"+cmd);
+		}
     }
     /**
      * It displays a message in the TextArea

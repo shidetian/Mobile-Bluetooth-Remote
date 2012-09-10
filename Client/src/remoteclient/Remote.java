@@ -20,6 +20,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 package remoteclient;
 
 import java.io.IOException;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import gui.*;
 import javax.microedition.midlet.*;
@@ -40,6 +42,8 @@ public class Remote extends MIDlet {
     public Display display;
     public int mode;
     int app;
+    Timer timer;
+    TimerTask connectionMonitor;
     public static final int MOUSE_MODE  = 0;
     public static final int KEY_MODE    = 1;
     public static final int APP_MODE    = 2;
@@ -60,8 +64,24 @@ public class Remote extends MIDlet {
         mode      = CHOOSE_MODE;
         bluetooth = new device.Bluetooth(this);
         display.setCurrent(new MainList(this));
+        timer = new Timer();
+        connectionMonitor = createMonitor();
     }
     
+    /**
+     * Creates a ConnectionMonitor Task. The task renews itself
+     * every second after its last execution
+     */
+    public TimerTask createMonitor(){
+    	TimerTask t = new TimerTask(){
+    		public void run(){
+    			bluetooth.connectionCheck();
+    			connectionMonitor = createMonitor(); 
+    			timer.schedule(connectionMonitor, 1000);
+    		}
+    	};
+		return t;
+    }
    /**
      * This function is called by the ModeList class whenever
      * a mode is selected
@@ -73,14 +93,14 @@ public class Remote extends MIDlet {
             mainCanvas = new MainCanvas(this);
             display.setCurrent(mainCanvas);
             try {
-				bluetooth.SendData("SUPDATE1");
+				bluetooth.SendData("SUPDATE1.0");
 			} catch (IOException e) {}
         }else if(smode ==1){
             mode = KEY_MODE;
             mainCanvas = new MainCanvas(this);
             display.setCurrent(mainCanvas);
             try {
-				bluetooth.SendData("SUPDATE1");
+				bluetooth.SendData("SUPDATE1.0");
 			} catch (IOException e) {}
         }else if(smode ==2){
             mode = APP_MODE;
@@ -201,6 +221,10 @@ public class Remote extends MIDlet {
     public void connectionEstablished(){
         commandsTable = new util.CommandsTable();
         commandsTable.initHashTable(this);
+        Displayable temp = display.getCurrent();
+        this.doAlert("Starting monitor", -1, temp);
+        //timer.scheduleAtFixedRate(connectionMonitor, 1000, 1000);
+        timer.schedule(connectionMonitor, 2000);
     }
     
     /**

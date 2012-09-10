@@ -158,7 +158,9 @@ public class MainCanvas extends Canvas implements CommandListener, Runnable {
                     	break;
                     default: //remote.bluetooth.resetInput();
                     remote.bluetooth.resetInput();
-                    remote.bluetooth.SendData("ACK");//remote.bluetooth.SendData("msg "+keyCode);
+                    remote.bluetooth.SendData("ACK");
+                    repaint();
+                    //remote.bluetooth.SendData("msg "+keyCode);
                     break;
                 }
             } catch (IOException ex) {
@@ -344,6 +346,7 @@ public class MainCanvas extends Canvas implements CommandListener, Runnable {
             int resty = height - tHeight - g.getFont().getHeight() - 2;
             try {
                 remote.bluetooth.SendData("DIM" + restx + "Y" + resty);
+                remote.bluetooth.SendData("SUPDATE1.0");
             } catch (Exception e) {
                 remote.doAlert("Error in sending command", -1, this);
             }
@@ -360,8 +363,11 @@ public class MainCanvas extends Canvas implements CommandListener, Runnable {
         	g.setColor(155, 155, 0);
     		g.drawString("Signal Low", width/2, height , Graphics.BOTTOM|Graphics.HCENTER);break;
         case Bluetooth.CONNECTION_TIMEOUT: 
-        	g.setColor(255, 0, 0);
+        	g.setColor(0, 0, 255);
     		g.drawString("Reconnecting", width/2, height , Graphics.BOTTOM|Graphics.HCENTER);break;
+        case Bluetooth.CONNECTION_LOST:
+        	g.setColor(255, 0, 0);
+    		g.drawString("No Connection", width/2, height , Graphics.BOTTOM|Graphics.HCENTER);break;
         }
     }
     

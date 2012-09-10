@@ -95,11 +95,18 @@ public class Bluetooth implements Runnable {
                         rs.displayMessage("Client Connected...");
                         listening = false;
                         firstTime = false;
-                        keepAlive= new TimerTask(){
+                        keepAlive= new TimerTask(){  //TODO may need synchronization
 
 							public void run() {
-								SendDataIfReady("NOOP");
-								remoteReady = true;
+								try {
+						            if(remoteReady){
+						            	System.out.println("Sending beat");
+						                dout.writeUTF("NOOP");
+						                dout.flush();
+						            }
+						        } catch (Exception e) {
+						            //rs.displayMessage("Exception while sending data " + e.toString());
+						        }
 							}
                         	
                         };
@@ -110,13 +117,9 @@ public class Bluetooth implements Runnable {
                         if (cmd.equals("ACK")){
                             remoteReady = true;
                             System.out.println("Remote is ready");
-                        }/*else if (cmd.equals("BDK")){
-                        	System.out.println("Reseting output stream");
-                        	dout.flush();
-                        	dout.close();
-                        	dout = new DataOutputStream(conn.openOutputStream());
-                        }*/
-                        rs.cmdReceived(cmd);
+                        }else{
+                        	rs.cmdReceived(cmd);
+                        }
                     }
                 } catch(ArrayIndexOutOfBoundsException e){} //Ignore error caused by moving mouse while UAC prompt
                 catch (Exception e) {
